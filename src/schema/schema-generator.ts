@@ -228,7 +228,9 @@ export abstract class SchemaGenerator {
                       resolver.resolverClassMetadata.isAbstract === false),
                 );
                 fieldsMap[field.schemaName] = {
-                  type: this.getGraphQLOutputType(field.name, field.getType(), field.typeOptions),
+                  type: fieldResolverMetadata
+                    ? this.getGraphQLOutputType(field.name, fieldResolverMetadata.getType(), fieldResolverMetadata.typeOptions)
+                    : this.getGraphQLOutputType(field.name, field.getType(), field.typeOptions),
                   complexity: field.complexity,
                   args: this.generateHandlerArgs(field.params!),
                   resolve: fieldResolverMetadata

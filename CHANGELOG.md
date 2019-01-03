@@ -1,5 +1,18 @@
 # Changelog and release notes
 
+## Unreleased
+<!-- here goes all the unreleased changes descriptions -->
+### Features
+- **Breaking Change**: change the default `PrintSchemaOptions` option `commentDescriptions` to false (no more `#` comments in SDL)
+- add support for passing `PrintSchemaOptions` in `buildSchema.emitSchemaFile` (e.g. `commentDescriptions: true` to restore previous behavior)
+
+## v0.16.0
+### Features
+- add support for default values in schema (#203)
+- add support for lists with nullable items (#211)
+### Fixes
+- fix browser shim (compatibility with polyfills for decorator support)
+
 ## v0.15.0
 ### Features
 - **Breaking Change**: upgrade `graphql` to `^14.0.2`, `graphql-subscriptions` to `^1.0.0` and `@types/graphql` to `^14.0.2`

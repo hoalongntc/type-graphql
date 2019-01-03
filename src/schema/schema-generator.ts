@@ -36,6 +36,7 @@ import {
   UnionResolveTypeError,
   GeneratingSchemaError,
   MissingSubscriptionTopicsError,
+  ConflictingDefaultValuesError,
 } from "../errors";
 import { ResolverFilterData, ResolverTopicData } from "../interfaces";
 import { getFieldMetadataFromInputType, getFieldMetadataFromObjectType } from "./utils";
@@ -102,6 +103,30 @@ export abstract class SchemaGenerator {
         "You need to provide `authChecker` function for `@Authorized` decorator usage!",
       );
     }
+  }
+
+  private static getDefaultValue(
+    typeInstance: { [property: string]: unknown },
+    typeOptions: TypeOptions,
+    fieldName: string,
+    typeName: string,
+  ): unknown | undefined {
+    const defaultValueFromInitializer = typeInstance[fieldName];
+    if (
+      typeOptions.defaultValue !== undefined &&
+      defaultValueFromInitializer !== undefined &&
+      typeOptions.defaultValue !== defaultValueFromInitializer
+    ) {
+      throw new ConflictingDefaultValuesError(
+        typeName,
+        fieldName,
+        typeOptions.defaultValue,
+        defaultValueFromInitializer,
+      );
+    }
+    return typeOptions.defaultValue !== undefined
+      ? typeOptions.defaultValue
+      : defaultValueFromInitializer;
   }
 
   private static buildTypesInfo() {
@@ -278,6 +303,7 @@ export abstract class SchemaGenerator {
         );
         return superClassTypeInfo ? superClassTypeInfo.type : undefined;
       };
+      const inputInstance = new (inputType.target as any)();
       return {
         target: inputType.target,
         type: new GraphQLInputObjectType({
@@ -286,9 +312,17 @@ export abstract class SchemaGenerator {
           fields: () => {
             let fields = inputType.fields!.reduce<GraphQLInputFieldConfigMap>(
               (fieldsMap, field) => {
+                field.typeOptions.defaultValue = this.getDefaultValue(
+                  inputInstance,
+                  field.typeOptions,
+                  field.name,
+                  inputType.name,
+                );
+
                 fieldsMap[field.schemaName] = {
                   description: field.description,
                   type: this.getGraphQLInputType(field.name, field.getType(), field.typeOptions),
+                  defaultValue: field.typeOptions.defaultValue,
                 };
                 return fieldsMap;
               },
@@ -412,6 +446,7 @@ export abstract class SchemaGenerator {
         args[param.name] = {
           description: param.description,
           type: this.getGraphQLInputType(param.name, param.getType(), param.typeOptions),
+          defaultValue: param.typeOptions.defaultValue,
         };
       } else if (param.kind === "args") {
         const argumentType = getMetadataStorage().argumentTypes.find(
@@ -435,10 +470,18 @@ export abstract class SchemaGenerator {
     argumentType: ClassMetadata,
     args: GraphQLFieldConfigArgumentMap = {},
   ) {
+    const argumentInstance = new (argumentType.target as any)();
     argumentType.fields!.forEach(field => {
+      field.typeOptions.defaultValue = this.getDefaultValue(
+        argumentInstance,
+        field.typeOptions,
+        field.name,
+        argumentType.name,
+      );
       args[field.schemaName] = {
         description: field.description,
         type: this.getGraphQLInputType(field.name, field.getType(), field.typeOptions),
+        defaultValue: field.typeOptions.defaultValue,
       };
     });
   }
@@ -478,7 +521,7 @@ export abstract class SchemaGenerator {
       throw new Error(`Cannot determine GraphQL output type for ${typeOwnerName}`!);
     }
 
-    return wrapWithTypeOptions(gqlType, typeOptions);
+    return wrapWithTypeOptions(typeOwnerName, gqlType, typeOptions);
   }
 
   private static getGraphQLInputType(
@@ -504,6 +547,6 @@ export abstract class SchemaGenerator {
       throw new Error(`Cannot determine GraphQL input type for ${typeOwnerName}`!);
     }
 
-    return wrapWithTypeOptions(gqlType, typeOptions);
+    return wrapWithTypeOptions(typeOwnerName, gqlType, typeOptions);
   }
 }

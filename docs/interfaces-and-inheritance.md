@@ -51,10 +51,10 @@ While creating GraphQL API, it's a common pattern to have pagination args in res
 ```typescript
 @ArgsType()
 class PaginationArgs {
-  @Field(type => Int, { nullable: true })
+  @Field(type => Int)
   skip: number = 0;
 
-  @Field(type => Int, { nullable: true })
+  @Field(type => Int)
   take: number = 25;
 }
 ```
@@ -63,7 +63,7 @@ and then reuse it everywhere:
 ```typescript
 @ArgsType()
 class GetTodosArgs extends PaginationArgs {
-  @Field({ nullable: false })
+  @Field()
   onlyCompleted: boolean = false;
 }
 ```
@@ -83,7 +83,7 @@ class Student extends Person {
 }
 ```
 
-Note that both the subclass and the parent class must be decorated with the same type of decorator, like `@ObjectType()` in the example `Person -> Student` above. Mixing decorator types across parent and child classes is prohibited and might result in schema building error --- you can't e.g decorate the subclass with `@ObjectType()` and the parent with `@InputType()`.
+Note that both the subclass and the parent class must be decorated with the same type of decorator, like `@ObjectType()` in the example `Person -> Student` above. Mixing decorator types across parent and child classes is prohibited and might result in schema building error - you can't e.g decorate the subclass with `@ObjectType()` and the parent with `@InputType()`.
 
 ## Resolvers inheritance
 The special kind of inheritance in TypeGraphQL is a resolver classes inheritance. This pattern allows you to e.g. create a base CRUD resolver class for your resource/entity, so you don't have to repeat the common boilerplate code all the time.
@@ -100,7 +100,7 @@ Be aware that with some `tsconfig.json` settings you might receive `[ts] Return 
 
 This factory should take a parameter that we can use to generate queries/mutations names, as well as the type that we would return from the resolvers:
 ```typescript
-function createBaseResolver<T extends Function>(suffix: string, objectTypeCls: T) {
+function createBaseResolver<T extends ClassType>(suffix: string, objectTypeCls: T) {
   abstract class BaseResolver {}
 
   return BaseResolver;
@@ -109,7 +109,7 @@ function createBaseResolver<T extends Function>(suffix: string, objectTypeCls: T
 
 It's very important to mark the `BaseResolver` class using `@Resolver` decorator with `{ isAbstract: true }` option that will prevent throwing error due to registering multiple queries/mutations with the same name.
 ```typescript
-function createBaseResolver<T extends Function>(suffix: string, objectTypeCls: T) {
+function createBaseResolver<T extends ClassType>(suffix: string, objectTypeCls: T) {
   @Resolver({ isAbstract: true })
   abstract class BaseResolver {}
 
@@ -119,7 +119,7 @@ function createBaseResolver<T extends Function>(suffix: string, objectTypeCls: T
 
 Then we can implement the resolvers methods in the same way as always. The only difference is that we can use `name` decorator option for `@Query`, `@Mutation` and `@Subscription` decorators to overwrite the name that will be emitted in schema:
 ```typescript
-function createBaseResolver<T extends Function>(suffix: string, objectTypeCls: T) {
+function createBaseResolver<T extends ClassType>(suffix: string, objectTypeCls: T) {
   @Resolver({ isAbstract: true })
   abstract class BaseResolver {
     protected items: T[] = [];
